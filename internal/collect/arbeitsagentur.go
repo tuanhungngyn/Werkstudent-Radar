@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	BaseURL      = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
-	APIKey       = "jobboerse-jobsuche"
-	PageSize     = 100
-	V6Endpoint   = "/pc/v6/jobs"
-	aaSearchTerm = "Werkstudent"
+	DefaultBaseURL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+	APIKey         = "jobboerse-jobsuche"
+	PageSize       = 100
+	V6Endpoint     = "/pc/v6/jobs"
+	aaSearchTerm   = "Werkstudent"
+	MaxPages       = 50
 )
 
 type aaSearch struct {
@@ -50,6 +51,16 @@ type aaDetail struct {
 
 type Arbeitsagentur struct {
 	HTTP *http.Client
+	// BaseURL overrides the API address, e.g. a fake server in tests.
+	// Empty means DefaultBaseURL.
+	BaseURL string
+}
+
+func (a *Arbeitsagentur) baseURL() string {
+	if a.BaseURL != "" {
+		return a.BaseURL
+	}
+	return DefaultBaseURL
 }
 
 func (a *Arbeitsagentur) Name() string {
@@ -57,13 +68,23 @@ func (a *Arbeitsagentur) Name() string {
 }
 
 func (a *Arbeitsagentur) Collect(ctx context.Context, q model.Query) ([]model.Job, error) {
-	var sr aaSearch
-	if err := a.get(ctx, a.searchURL(q, 1), &sr); err != nil {
-		return nil, err
-	}
-	jobs := make([]model.Job, 0, len(sr.ResultsList))
-	for _, r := range sr.ResultsList {
-		jobs = append(jobs, a.toJob(r))
+	total := 0
+	var jobs []model.Job
+	for page := 1; page <= MaxPages; page++ {
+		var sr aaSearch
+		if err := a.get(ctx, a.searchURL(q, page), &sr); err != nil {
+			return nil, err
+		}
+		total = sr.MaxResults
+		for _, r := range sr.ResultsList {
+			jobs = append(jobs, a.toJob(r))
+		}
+		if len(sr.ResultsList) < PageSize {
+			break
+		}
+		if len(jobs) >= total {
+			break
+		}
 	}
 	return jobs, nil
 }
@@ -113,7 +134,7 @@ func (a *Arbeitsagentur) searchURL(q model.Query, page int) string {
 		keys.Set("umkreis", strconv.Itoa(q.Radius))
 	}
 
-	return BaseURL + V6Endpoint + "?" + keys.Encode()
+	return a.baseURL() + V6Endpoint + "?" + keys.Encode()
 }
 
 func (a *Arbeitsagentur) toJob(r aaResult) model.Job {
