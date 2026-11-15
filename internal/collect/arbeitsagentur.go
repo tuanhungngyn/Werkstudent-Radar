@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	BaseUrl    = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
-	APIKey     = "jobboerse-jobsuche"
-	PageSize   = 100
-	V6Endpoint = "/pc/v6/jobs"
+	BaseURL      = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+	APIKey       = "jobboerse-jobsuche"
+	PageSize     = 100
+	V6Endpoint   = "/pc/v6/jobs"
+	aaSearchTerm = "Werkstudent"
 )
 
 type aaSearch struct {
@@ -96,10 +97,15 @@ func (a *Arbeitsagentur) get(ctx context.Context, u string, dst any) error {
 func (a *Arbeitsagentur) searchURL(q model.Query, page int) string {
 	keys := url.Values{}
 	keys.Set("page", strconv.Itoa(page))
+	keys.Set("size", strconv.Itoa(PageSize))
 
+	joinedTitle := aaSearchTerm
 	if q.Title != "" {
-		keys.Set("was", q.Title)
+		joinedTitle = joinedTitle + " " + q.Title
 	}
+
+	keys.Set("was", joinedTitle)
+
 	if q.Location != "" {
 		keys.Set("wo", q.Location)
 	}
@@ -107,7 +113,7 @@ func (a *Arbeitsagentur) searchURL(q model.Query, page int) string {
 		keys.Set("umkreis", strconv.Itoa(q.Radius))
 	}
 
-	return BaseUrl + V6Endpoint + "?" + keys.Encode()
+	return BaseURL + V6Endpoint + "?" + keys.Encode()
 }
 
 func (a *Arbeitsagentur) toJob(r aaResult) model.Job {

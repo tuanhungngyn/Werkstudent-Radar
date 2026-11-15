@@ -1,18 +1,29 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net/http"
+
+	"werkstudent-radar/internal/collect"
+	"werkstudent-radar/internal/model"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	collector := &collect.Arbeitsagentur{}
+	query := model.Query{
+		Location: "Hamburg",
+		Radius:   50,
+	}
+	context := context.Background()
 
-	mux.HandleFunc("GET /hello", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "hello")
-	})
+	jobs, err := collector.Collect(context, query)
+	if err != nil {
+		log.Fatalf("failed to collect jobs: %v", err)
+	}
 
-	log.Println("listening on http://127.0.0.1:8080")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", mux))
+	fmt.Printf("collected %d jobs\n", len(jobs))
+	for _, job := range jobs {
+		fmt.Printf("%s - %s\n", job.Title, job.Location)
+	}
 }
