@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to companies.json (git-ignored) and fill in the companies you applied to.",
+  "hints": ["acme", "example corp"],
+  "domains": {
+    "acme-careers.com": "Acme"
+  },
+  "aliases": {
+    "acme": "Acme",
+    "example corp": "Example Corp"
+  }
+}

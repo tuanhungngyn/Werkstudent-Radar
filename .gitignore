@@ -1,0 +1,33 @@
+# Go
+/radar
+/bin/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# jobmail personal data (real mails, companies, statuses): never commit
+jobmail/jobmail.db
+jobmail/jobmail.db-*
+jobmail/applications.csv
+jobmail/applications.xlsx
+jobmail/events.csv
+jobmail/dashboard.html
+jobmail/overrides.json
+jobmail/companies.json
+
+# Secrets / local env
+.env
+.env.*
+
+# Editors
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
