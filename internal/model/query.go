@@ -1,9 +1,7 @@
 package model
 
 type Query struct {
-	
-	Title string
+	Title    string
 	Location string
-	Radius int
-
+	Radius   int
 }
