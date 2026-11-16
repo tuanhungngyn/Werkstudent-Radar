@@ -1,0 +1,62 @@
+# Runs on every push to main and on every pull request.
+# Each step fails the run if its check fails, so a red X on GitHub means:
+# open the run, find the failed step, read its output.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch cancels the older, still-running check.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod # same Go version as the "go" line in go.mod
+          cache: true # reuse downloaded modules between runs
+
+      - name: Check formatting (gofmt)
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files are not formatted. Run 'go fmt ./...' and commit:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Check go.mod / go.sum are tidy
+        run: |
+          go mod tidy
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "go.mod or go.sum is out of date. Run 'go mod tidy' and commit."
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test (with race detector)
+        run: go test -race -count=1 ./...
+
+      - name: Build Linux binary
+        # Proves the cross-compile for a Linux VM works (pure-Go SQLite, no cgo).
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o radar ./cmd/radar

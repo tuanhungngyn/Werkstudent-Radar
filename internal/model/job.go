@@ -7,6 +7,7 @@ type Job struct {
 	Remote          bool
 	URL             string
 	PublishedAt     string
+	Source          string
 	ReferenceNumber string
 	Description     string
 }

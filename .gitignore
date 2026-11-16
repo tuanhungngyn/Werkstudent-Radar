@@ -31,3 +31,8 @@ jobmail/companies.json
 
 # macOS
 .DS_Store
+
+# Database
+*.sqlite
+*.db
+
