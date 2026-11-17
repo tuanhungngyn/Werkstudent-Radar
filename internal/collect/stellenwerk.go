@@ -19,7 +19,7 @@ import (
 const (
 	swDefaultBaseURL = "https://www.stellenwerk.de"
 	swRequestLimit   = 1 * time.Second // default pause between job page requests
-	swMaxPerRun      = 10 // job pages per run, until we can skip known jobs
+	swMaxPerRun      = 10              // job pages per run, until we can skip known jobs
 )
 
 type swSitemap struct {
