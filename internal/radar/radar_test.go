@@ -66,7 +66,11 @@ func openStorage(t *testing.T) *storage.Storage {
 	if err != nil {
 		t.Fatalf("storage.Open: %v", err)
 	}
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() {
+		if err := st.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
 	return st
 }
 

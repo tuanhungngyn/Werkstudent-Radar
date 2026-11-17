@@ -28,11 +28,11 @@ func fakeAA(t *testing.T, total int, alwaysFull bool) (*Arbeitsagentur, *atomic.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := requests.Add(1)
 
-		if got := r.Header.Get("X-API-Key"); got != APIKey {
-			t.Errorf("request %d: X-API-Key = %q, want %q", n, got, APIKey)
+		if got := r.Header.Get("X-API-Key"); got != aaAPIKey {
+			t.Errorf("request %d: X-API-Key = %q, want %q", n, got, aaAPIKey)
 		}
-		if !strings.HasSuffix(r.URL.Path, V6Endpoint) {
-			t.Errorf("request %d: path = %q, want it to end with %q", n, r.URL.Path, V6Endpoint)
+		if !strings.HasSuffix(r.URL.Path, aaV6Endpoint) {
+			t.Errorf("request %d: path = %q, want it to end with %q", n, r.URL.Path, aaV6Endpoint)
 		}
 
 		page, err := strconv.Atoi(r.URL.Query().Get("page"))
@@ -47,10 +47,10 @@ func fakeAA(t *testing.T, total int, alwaysFull bool) (*Arbeitsagentur, *atomic.
 		}
 
 		// How many results are left for this page?
-		count := total - (page-1)*PageSize
-		count = max(0, min(count, PageSize))
+		count := total - (page-1)*aaPageSize
+		count = max(0, min(count, aaPageSize))
 		if alwaysFull {
-			count = PageSize
+			count = aaPageSize
 		}
 
 		resp := aaSearch{MaxResults: total}
@@ -61,7 +61,9 @@ func fakeAA(t *testing.T, total int, alwaysFull bool) (*Arbeitsagentur, *atomic.
 			})
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Errorf("fake server: encode response: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close) // stop the server when the test ends
 
@@ -104,8 +106,8 @@ func TestArbeitsagenturCollectPagination(t *testing.T) {
 			name:         "broken API with endless full pages stops at the safety limit",
 			total:        1_000_000,
 			alwaysFull:   true,
-			wantJobs:     MaxPages * PageSize,
-			wantRequests: MaxPages,
+			wantJobs:     aaMaxPages * aaPageSize,
+			wantRequests: aaMaxPages,
 		},
 	}
 

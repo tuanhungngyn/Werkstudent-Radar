@@ -43,20 +43,17 @@ func Open(path string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to ping database: %w", err), db.Close())
 	}
 
 	if _, err := db.Exec(schema); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create schema: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to create schema: %w", err), db.Close())
 	}
 
 	// PRAGMA does not support ? placeholders, so the value is formatted in.
 	// Safe here: schemaVersion is our own constant, never user input.
 	if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", schemaVersion)); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to set schema version: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to set schema version: %w", err), db.Close())
 	}
 
 	return &Storage{db: db}, nil
@@ -75,7 +72,9 @@ func (s *Storage) Save(ctx context.Context, jobs []model.Job, now time.Time) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	// Rollback after a successful Commit only returns sql.ErrTxDone, so
+	// its error is dropped on purpose; it only matters on early returns.
+	defer func() { _ = tx.Rollback() }()
 
 	var newJobs []model.Job
 	for _, j := range jobs {

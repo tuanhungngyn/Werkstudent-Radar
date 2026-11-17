@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
-	APIKey         = "jobboerse-jobsuche"
-	PageSize       = 100
-	V6Endpoint     = "/pc/v6/jobs"
-	aaSearchTerm   = "Werkstudent"
-	MaxPages       = 50
+	aaDefaultBaseURL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+	aaAPIKey         = "jobboerse-jobsuche"
+	aaPageSize       = 100
+	aaV6Endpoint     = "/pc/v6/jobs"
+	aaSearchTerm     = "Werkstudent"
+	aaMaxPages       = 50
 )
 
 type aaSearch struct {
@@ -60,7 +60,7 @@ func (a *Arbeitsagentur) baseURL() string {
 	if a.BaseURL != "" {
 		return a.BaseURL
 	}
-	return DefaultBaseURL
+	return aaDefaultBaseURL
 }
 
 func (a *Arbeitsagentur) Name() string {
@@ -70,7 +70,7 @@ func (a *Arbeitsagentur) Name() string {
 func (a *Arbeitsagentur) Collect(ctx context.Context, q model.Query) ([]model.Job, error) {
 	total := 0
 	var jobs []model.Job
-	for page := 1; page <= MaxPages; page++ {
+	for page := 1; page <= aaMaxPages; page++ {
 		var sr aaSearch
 		if err := a.get(ctx, a.searchURL(q, page), &sr); err != nil {
 			return nil, err
@@ -79,7 +79,7 @@ func (a *Arbeitsagentur) Collect(ctx context.Context, q model.Query) ([]model.Jo
 		for _, r := range sr.ResultsList {
 			jobs = append(jobs, a.toJob(r))
 		}
-		if len(sr.ResultsList) < PageSize {
+		if len(sr.ResultsList) < aaPageSize {
 			break
 		}
 		if len(jobs) >= total {
@@ -94,7 +94,7 @@ func (a *Arbeitsagentur) get(ctx context.Context, u string, dst any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-API-Key", APIKey)
+	req.Header.Set("X-API-Key", aaAPIKey)
 	req.Header.Set("Accept", "application/json")
 
 	hc := a.HTTP
@@ -106,7 +106,9 @@ func (a *Arbeitsagentur) get(ctx context.Context, u string, dst any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	// A failed Close on a response body leaves nothing to recover, so the
+	// error is dropped on purpose.
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
@@ -118,7 +120,7 @@ func (a *Arbeitsagentur) get(ctx context.Context, u string, dst any) error {
 func (a *Arbeitsagentur) searchURL(q model.Query, page int) string {
 	keys := url.Values{}
 	keys.Set("page", strconv.Itoa(page))
-	keys.Set("size", strconv.Itoa(PageSize))
+	keys.Set("size", strconv.Itoa(aaPageSize))
 
 	joinedTitle := aaSearchTerm
 	if q.Title != "" {
@@ -134,7 +136,7 @@ func (a *Arbeitsagentur) searchURL(q model.Query, page int) string {
 		keys.Set("umkreis", strconv.Itoa(q.Radius))
 	}
 
-	return a.baseURL() + V6Endpoint + "?" + keys.Encode()
+	return a.baseURL() + aaV6Endpoint + "?" + keys.Encode()
 }
 
 func (a *Arbeitsagentur) toJob(r aaResult) model.Job {
@@ -150,6 +152,7 @@ func (a *Arbeitsagentur) toJob(r aaResult) model.Job {
 		Remote:          r.Homeoffice,
 		URL:             r.ExternalURL,
 		PublishedAt:     r.PublishDate,
+		ExpiryDate:      "", // The search results have no end date (veroeffentlichungszeitraum only has "von")
 		ReferenceNumber: r.Refnr,
 		Description:     "", // Details are not available in the search results, would require an additional request to fetch
 	}

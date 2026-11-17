@@ -25,7 +25,11 @@ func openTestStorage(t *testing.T) (*Storage, string) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
 	return s, path
 }
 
@@ -135,7 +139,11 @@ func TestOpenTwiceKeepsData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reopen: %v", err)
 	}
-	defer s2.Close()
+	t.Cleanup(func() {
+		if err := s2.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
 
 	if n := countJobs(t, s2); n != 2 {
 		t.Errorf("after reopen: %d jobs, want 2", n)

@@ -34,12 +34,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open storage: %v", err)
 	}
-	defer st.Close()
+	defer func() {
+		if err := st.Close(); err != nil {
+			log.Printf("failed to close storage: %v", err)
+		}
+	}()
 
 	// Create Radar with Collectors and Storage
 	r := radar.Radar{
 		Collectors: []radar.Collector{
 			&collect.Arbeitsagentur{},
+			&collect.Stellenwerk{},
 		},
 		Storage: st,
 		Timeout: 2 * time.Minute, // per source

@@ -71,7 +71,7 @@ func TestArbeitsagenturQueryMapping(t *testing.T) {
 				"wo":      "München",
 				"umkreis": "20",
 				"page":    "2",
-				"size":    strconv.Itoa(PageSize),
+				"size":    strconv.Itoa(aaPageSize),
 			},
 		},
 		{
@@ -106,8 +106,8 @@ func TestArbeitsagenturQueryMapping(t *testing.T) {
 			if err != nil {
 				t.Fatalf("searchURL returned an invalid URL %q: %v", raw, err)
 			}
-			if !strings.HasSuffix(u.Path, V6Endpoint) {
-				t.Errorf("path = %q, want it to end with %q", u.Path, V6Endpoint)
+			if !strings.HasSuffix(u.Path, aaV6Endpoint) {
+				t.Errorf("path = %q, want it to end with %q", u.Path, aaV6Endpoint)
 			}
 
 			params := u.Query()
